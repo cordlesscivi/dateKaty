@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Секреты Нового года — интерактивный адвент-календарь</title>
+  <meta name="description" content="Уютный интерактивный адвент-календарь на 30 дней">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Montserrat:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="snow-canvas" aria-hidden="true"></canvas>
+
+  <div class="container">
+    <header class="header">
+      <h1>Секреты Нового года ✨</h1>
+      <div class="timer-container">
+        <div class="timer-label" id="timer-label">До следующего окошка:</div>
+        <div class="timer-display" id="countdown" role="timer" aria-live="polite">
+          <span id="days">00</span>:<span id="hours">00</span>:<span id="minutes">00</span>:<span id="seconds">00</span>
+        </div>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+      </div>
+    </header>
+
+    <div class="instruction-modal" id="instruction-modal" role="dialog" aria-modal="true" aria-labelledby="instruction-title" aria-hidden="true">
+      <div class="instruction-overlay" id="instruction-overlay"></div>
+      <div class="instruction-content">
+        <h2 class="instruction-title" id="instruction-title">❄️ Как пользоваться адвент-календарём</h2>
+        <div class="instruction-text" id="instruction-text"></div>
+        <button class="instruction-close-btn" id="instruction-close-btn" type="button">✨ Начать приключения!</button>
+      </div>
+    </div>
+
+    <main class="calendar">
+      <div class="calendar-grid" id="calendar-grid"></div>
+    </main>
+  </div>
+
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-hidden="true">
+    <div class="modal-overlay" id="modal-overlay"></div>
+    <div class="modal-content">
+      <h2 class="modal-title" id="modal-title">День N</h2>
+      <p class="modal-text" id="modal-text"></p>
+      <img id="qr-code" class="modal-qr" alt="QR-код" style="display:none;">
+      <button class="modal-close-btn" id="modal-close-btn" type="button">Закрыть</button>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/snow.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
