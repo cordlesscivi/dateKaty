@@ -13,6 +13,19 @@
 <body>
   <canvas id="snow-canvas" aria-hidden="true"></canvas>
 
+  <!-- Экран входа: показывается, пока не введён пароль -->
+  <div class="lock-screen" id="lock-screen" role="dialog" aria-modal="true" aria-labelledby="lock-title">
+    <div class="lock-card">
+      <h2 class="lock-title" id="lock-title">🔐 Секретный календарь</h2>
+      <p class="lock-subtitle">Введи пароль, чтобы открыть адвент-календарь</p>
+      <form class="lock-form" id="lock-form">
+        <input class="lock-input" id="lock-input" type="password" placeholder="Пароль" autocomplete="current-password" aria-label="Пароль">
+        <button class="lock-btn" type="submit">Открыть ✨</button>
+      </form>
+      <p class="lock-error" id="lock-error" role="alert"></p>
+    </div>
+  </div>
+
   <div class="container">
     <header class="header">
       <h1>Секреты Нового года ✨</h1>

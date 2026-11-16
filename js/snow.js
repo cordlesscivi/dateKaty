@@ -1,15 +1,11 @@
-/* ============================================================
-   Лёгкий падающий снег на canvas (requestAnimationFrame).
-   Не грузит браузер: количество снежинок подбирается по размеру экрана,
-   DPR ограничен, рендер останавливается на свернутой вкладке (rAF).
-   ============================================================ */
+
 (function () {
   'use strict';
 
   const canvas = document.getElementById('snow-canvas');
   if (!canvas) return;
 
-  // Уважаем настройку «уменьшить движение» — снег отключается.
+
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   const ctx = canvas.getContext('2d');

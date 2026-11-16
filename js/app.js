@@ -52,14 +52,47 @@
     }
   }
 
+  /* ---------- Часовой пояс (TIMEZONE из config.js) ---------- */
+
+  // Смещение зоны TIMEZONE относительно UTC (в мс) на момент date.
+  function getZoneOffsetMs(date) {
+    const fmt = new Intl.DateTimeFormat('en-CA', {
+      timeZone: TIMEZONE,
+      hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
+    const parts = {};
+    for (const p of fmt.formatToParts(date)) {
+      if (p.type !== 'literal') parts[p.type] = p.value;
+    }
+    const asUtc = Date.UTC(
+      Number(parts.year), Number(parts.month) - 1, Number(parts.day),
+      Number(parts.hour), Number(parts.minute), Number(parts.second),
+    );
+    return asUtc - date.getTime();
+  }
+
+  // «Сейчас» в зоне TIMEZONE — дата, сдвинутая так, что UTC-методы читают минское время.
+  function zonedNow() {
+    const now = new Date();
+    return new Date(now.getTime() + getZoneOffsetMs(now));
+  }
+
+  // Абсолютное время (мс) полуночи дня в зоне TIMEZONE.
+  function zonedMidnightToUtc(year, month, day) {
+    const guess = Date.UTC(year, month - 1, day, 0, 0, 0, 0);
+    return guess - getZoneOffsetMs(new Date(guess));
+  }
+
   /* ---------- Доступность окон по датам ---------- */
 
-  // Окошко N доступно с 00:00 по местному времени N декабря года YEAR.
+  // Окошко N доступно с 00:00 по времени Минска N декабря года YEAR.
   function isAvailable(dayNumber) {
     if (TEST_MODE) return true;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const unlockDate = new Date(YEAR, 11, dayNumber); // 1 декабря → 30 декабря
+    const today = zonedNow();
+    today.setUTCHours(0, 0, 0, 0);
+    const unlockDate = new Date(Date.UTC(YEAR, 11, dayNumber)); // 1 декабря → 30 декабря
     return today >= unlockDate;
   }
 
@@ -133,14 +166,21 @@
     if (openedDays.length >= TOTAL_DAYS) {
       return '✨ Все секреты раскрыты! С Новым годом, дорогой друг! ✨';
     }
-    const nextYearStart = new Date(YEAR + 1, 0, 1, 0, 0, 0, 0);
-    if (new Date() >= nextYearStart) {
+    const nextYearStartMs = zonedMidnightToUtc(YEAR + 1, 1, 1);
+    if (Date.now() >= nextYearStartMs) {
       return `✨ Декабрь ${YEAR} подошло к концу! С Новым годом, дорогой друг! ✨`;
     }
     return '';
   }
 
   function updateCountdown() {
+    // Тестовый режим: все окошки доступны, считать нечего.
+    if (TEST_MODE) {
+      timerEl.classList.add('finished');
+      timerEl.textContent = 'Тестовый режим: все окошки доступны ✨';
+      return;
+    }
+
     const congratulations = getCongratulationsText();
     if (congratulations) {
       timerEl.classList.add('finished');
@@ -150,17 +190,27 @@
 
     timerEl.classList.remove('finished');
 
-    // Собираем номера дней, которые ещё не были открыты.
-    const unopened = [];
+    // Считаем до ближайшего окошка, которое ещё не разблокировано
+    // (его полночь по Минску ещё не наступила) — независимо от того,
+    // какие окошки уже открыты.
+    const nowMs = Date.now();
+    let nextLockedDay = null;
     for (let d = 1; d <= TOTAL_DAYS; d++) {
-      if (!openedDays.includes(d)) unopened.push(d);
+      if (zonedMidnightToUtc(YEAR, 12, d) > nowMs) {
+        nextLockedDay = d;
+        break;
+      }
     }
 
-    const nextDay = unopened[0];
-    if (nextDay === undefined) return;
+    // Все 30 окошек уже разблокированы — остаётся открыть недостающие.
+    if (nextLockedDay === null) {
+      timerEl.classList.add('finished');
+      timerEl.textContent = '✨ Все окошки разблокированы! Открой оставшиеся ✨';
+      return;
+    }
 
-    const unlockDate = new Date(YEAR, 11, nextDay, 0, 0, 0, 0);
-    const diffMs = Math.max(0, unlockDate.getTime() - Date.now());
+    const unlockMs = zonedMidnightToUtc(YEAR, 12, nextLockedDay);
+    const diffMs = Math.max(0, unlockMs - nowMs);
     const diffSec = Math.floor(diffMs / 1000);
     const d = Math.floor(diffSec / 86400);
     const h = Math.floor((diffSec % 86400) / 3600);
@@ -171,9 +221,7 @@
     hoursEl.textContent = String(h).padStart(2, '0');
     minutesEl.textContent = String(m).padStart(2, '0');
     secondsEl.textContent = String(s).padStart(2, '0');
-
-    // Если следующее окошко уже доступно, но не открыто — мягко намекаем.
-    timerLabel.textContent = diffSec === 0 ? 'Окошко уже доступно — жми!' : 'До следующего окошка:';
+    timerLabel.textContent = 'До следующего окошка:';
   }
 
   /* ---------- Модальное окно ---------- */
@@ -246,26 +294,70 @@
   updateProgress();
   updateCountdown();
 
-  // Показываем инструкцию каждый раз при загрузке страницы
-  instructionModal.style.display = 'flex';
-  instructionText.textContent = INSTRUCTION_TEXT;
-  // Закрытие — крестик, оверлей или Esc
+  /* ---------- Инструкция ---------- */
+
+  // Инструкция показывается один раз (или каждый раз,
+  // если SHOW_INSTRUCTION_EVERY_TIME = true) — запоминаем в localStorage.
+  const INSTRUCTION_SEEN_KEY = 'advent-calendar-instruction-seen';
+
+  function showInstructionModal() {
+    if (!SHOW_INSTRUCTION_EVERY_TIME && localStorage.getItem(INSTRUCTION_SEEN_KEY) === 'true') return;
+    instructionText.textContent = INSTRUCTION_TEXT;
+    instructionModal.classList.add('open');
+    instructionModal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeInstructionModal() {
+    instructionModal.classList.remove('open');
+    instructionModal.setAttribute('aria-hidden', 'true');
+    localStorage.setItem(INSTRUCTION_SEEN_KEY, 'true');
+  }
+
   instructionCloseBtn.addEventListener('click', closeInstructionModal);
   instructionOverlay.addEventListener('click', closeInstructionModal);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeInstructionModal();
   });
 
-  function closeInstructionModal() {
-    instructionModal.style.display = 'none';
+  /* ---------- Экран входа (пароль) ---------- */
+
+  const UNLOCK_KEY = 'advent-calendar-unlocked';
+  const lockScreen = document.getElementById('lock-screen');
+  const lockForm = document.getElementById('lock-form');
+  const lockInput = document.getElementById('lock-input');
+  const lockError = document.getElementById('lock-error');
+
+  function unlockApp() {
+    lockScreen.style.display = 'none';
+    document.body.style.overflow = '';
+    showInstructionModal();
+  }
+
+  if (!ACCESS_PASSWORD || sessionStorage.getItem(UNLOCK_KEY) === 'true') {
+    unlockApp();
+  } else {
+    lockScreen.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    lockInput.focus();
+    lockForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (lockInput.value.trim() === ACCESS_PASSWORD) {
+        sessionStorage.setItem(UNLOCK_KEY, 'true');
+        unlockApp();
+      } else {
+        lockError.textContent = 'Неверный пароль. Попробуй ещё раз ✨';
+        lockInput.value = '';
+        lockInput.focus();
+      }
+    });
   }
 
   // Таймер тикает раз в секунду; при смене даты перерисовываем сетку,
   // чтобы в полночь новое окошко «загорелось» без перезагрузки страницы.
-  let lastDateKey = new Date().toDateString();
+  let lastDateKey = zonedNow().toISOString().slice(0, 10);
   setInterval(() => {
     updateCountdown();
-    const todayKey = new Date().toDateString();
+    const todayKey = zonedNow().toISOString().slice(0, 10);
     if (todayKey !== lastDateKey) {
       lastDateKey = todayKey;
       renderCalendar();
