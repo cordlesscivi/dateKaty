@@ -23,7 +23,7 @@ const TEST_MODE = true;
 
 // SHOW_INSTRUCTION_EVERY_TIME — true: инструкция показывается при каждом входе.
 // false: показывается один раз, потом запоминается в localStorage.
-const SHOW_INSTRUCTION_EVERY_TIME = true;
+const SHOW_INSTRUCTION_EVERY_TIME = false;
 
 // Пароль для входа на сайт. Введи свой — без него календарь не откроется.
 // Оставь пустую строку '', чтобы отключить защиту.
