@@ -109,3 +109,7 @@ const QR_URLS = [
     'https://drive.google.com/file/d/1Ku-DtMYg2AlPhhkiU6OsSHndf7fAEOl5/view?usp=sharing',
     'https://drive.google.com/file/d/1SxI9X0-nCySbrRhRSetU0nDM4MfuvQAO/view?usp=sharing', // 30
 ];
+
+// QR_STYLE — 'styled': стильные QR с сердечком (библиотека QRCodeStyling, нужен интернет),
+// 'classic': обычные ч/б QR через api.qrserver.com (как было до изменения).
+const QR_STYLE = 'styled';

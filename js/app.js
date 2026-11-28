@@ -8,6 +8,10 @@
   const TOTAL_DAYS = 30;
   const STORAGE_KEY = 'advent-calendar-opened';
 
+  // Сердечко в центре стильного QR-кода (используется при QR_STYLE = 'styled').
+  const HEART_DATA_URI =
+    'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="%23e0356b" d="M12 21s-7-4.5-9.5-9C.8 8.6 2.7 4.5 6.5 4.5c2.1 0 3.6 1.2 4.5 2.6.9-1.4 2.4-2.6 4.5-2.6 3.8 0 5.7 4.1 4 7.5C19 16.5 12 21 12 21z"/></svg>';
+
   const calendarGrid = document.getElementById('calendar-grid');
   const timerEl = document.getElementById('countdown');
   const timerLabel = document.getElementById('timer-label');
@@ -236,15 +240,44 @@
     modalTitle.textContent = `День ${dayNumber}`;
     modalText.textContent = SECRETS[dayNumber - 1] || `Секрет дня ${dayNumber} ещё не добавлен.`;
 
-    // QR-код с ссылкой на фото дня: генерируем через бесплатный API api.qrserver.com
-    // Если QR_URLS[dayNumber-1] пустая строка — QR не показываем.
+    // QR-код дня.
+    // QR_STYLE = 'styled' — стильный QR с сердечком (библиотека QRCodeStyling, нужен интернет),
+    // QR_STYLE = 'classic' — обычный ч/б QR через api.qrserver.com (как было).
     if (modalQR) {
       const qrUrl = QR_URLS[dayNumber - 1] || '';
-      if (qrUrl) {
-        modalQR.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}`;
-        modalQR.style.display = 'block';
-      } else {
+      if (!qrUrl) {
         modalQR.style.display = 'none';
+        modalQR.removeAttribute('src');
+        return;
+      }
+      modalQR.style.display = 'block';
+
+      const makeClassicQR = () => {
+        modalQR.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}`;
+      };
+
+      if (QR_STYLE === 'styled' && typeof QRCodeStyling === 'function') {
+        const qr = new QRCodeStyling({
+          width: 150,
+          height: 150,
+          type: 'canvas',
+          data: qrUrl,
+          margin: 6,
+          qrOptions: { errorCorrectionLevel: 'H' },
+          image: HEART_DATA_URI,
+          imageOptions: { margin: 4, imageSize: 0.3 },
+          dotsOptions: { type: 'rounded', color: '#2a1a3e' },
+          cornersSquareOptions: { type: 'extra-rounded', color: '#2a1a3e' },
+          cornersDotOptions: { type: 'dot', color: '#2a1a3e' },
+          backgroundOptions: { color: '#ffffff' },
+        });
+        qr.getRawData('png').then((result) => {
+          const src = typeof result === 'string' ? result : URL.createObjectURL(result);
+          if (src) modalQR.src = src;
+          else makeClassicQR();
+        }).catch(makeClassicQR);
+      } else {
+        makeClassicQR();
       }
     }
 
