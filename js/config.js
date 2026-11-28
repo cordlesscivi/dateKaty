@@ -112,4 +112,4 @@ const QR_URLS = [
 
 // QR_STYLE — 'styled': стильные QR с сердечком (библиотека QRCodeStyling, нужен интернет),
 // 'classic': обычные ч/б QR через api.qrserver.com (как было до изменения).
-const QR_STYLE = 'styled';
+const QR_STYLE = 'classic';
